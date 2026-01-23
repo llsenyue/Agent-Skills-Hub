@@ -3,10 +3,11 @@
   "displayName": "Agent Skills Hub",
   "description": "Centralized management for AI Agent Skills and local tool configurations. Supports Antigravity, Claude, Windsurf, Gemini CLI, etc.",
   "version": "0.1.0",
+  "icon": "icon.png",
   "publisher": "llsenyue",
   "repository": {
     "type": "git",
-    "url": "https://github.com/llsenyue/agent-skills-hub"
+    "url": "https://github.com/llsenyue/Agent-Skills-Hub"
   },
   "engines": {
     "vscode": "^1.85.0"
@@ -33,47 +34,47 @@
     "commands": [
       {
         "command": "skill-manager.initWarehouse",
-        "title": "Skill Manager: 初始化中央仓库",
+        "title": "Agent Skills Hub: 初始化中央仓库",
         "icon": "$(folder-library)"
       },
       {
         "command": "skill-manager.linkAllTools",
-        "title": "Skill Manager: 链接所有工具",
+        "title": "Agent Skills Hub: 链接所有工具",
         "icon": "$(link)"
       },
       {
         "command": "skill-manager.linkTool",
-        "title": "Skill Manager: 链接指定工具",
+        "title": "Agent Skills Hub: 链接指定工具",
         "icon": "$(link)"
       },
       {
         "command": "skill-manager.unlinkTool",
-        "title": "Skill Manager: 取消工具链接",
+        "title": "Agent Skills Hub: 取消工具链接",
         "icon": "$(debug-disconnect)"
       },
       {
         "command": "skill-manager.showStatus",
-        "title": "Skill Manager: 查看链接状态",
+        "title": "Agent Skills Hub: 查看链接状态",
         "icon": "$(info)"
       },
       {
         "command": "skill-manager.openWarehouse",
-        "title": "Skill Manager: 打开中央仓库目录",
+        "title": "Agent Skills Hub: 打开中央仓库目录",
         "icon": "$(folder-opened)"
       },
       {
         "command": "skill-manager.refreshSkills",
-        "title": "Skill Manager: 刷新 Skills 列表",
+        "title": "Agent Skills Hub: 刷新 Skills 列表",
         "icon": "$(refresh)"
       },
       {
         "command": "skill-manager.createSkill",
-        "title": "Skill Manager: 创建新 Skill",
+        "title": "Agent Skills Hub: 创建新 Skill",
         "icon": "$(new-file)"
       },
       {
         "command": "skill-manager.openPanel",
-        "title": "Skill Manager: 打开管理面板",
+        "title": "Agent Skills Hub: 打开管理面板",
         "icon": "$(dashboard)"
       }
     ],
@@ -81,8 +82,8 @@
       "activitybar": [
         {
           "id": "skill-manager-container",
-          "title": "Skill Manager",
-          "icon": "media/icon.svg"
+          "title": "Agent Skills Hub",
+          "icon": "media/icon.png"
         }
       ]
     },
@@ -131,7 +132,7 @@
       ]
     },
     "configuration": {
-      "title": "Skill Manager",
+      "title": "Agent Skills Hub",
       "properties": {
         "skillManager.centralWarehousePath": {
           "type": "string",

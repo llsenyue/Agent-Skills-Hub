@@ -1,0 +1,183 @@
+{
+  "name": "agent-skills-hub",
+  "displayName": "Agent Skills Hub",
+  "description": "Centralized management for AI Agent Skills and local tool configurations. Supports Antigravity, Claude, Windsurf, Gemini CLI, etc.",
+  "version": "0.1.0",
+  "publisher": "llsenyue",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/llsenyue/agent-skills-hub"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Snippets"
+  ],
+  "keywords": [
+    "AI",
+    "Skills",
+    "Antigravity",
+    "Claude",
+    "Windsurf",
+    "Gemini"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:skillManagerSkills",
+    "onView:skillManagerTools"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "skill-manager.initWarehouse",
+        "title": "Skill Manager: 初始化中央仓库",
+        "icon": "$(folder-library)"
+      },
+      {
+        "command": "skill-manager.linkAllTools",
+        "title": "Skill Manager: 链接所有工具",
+        "icon": "$(link)"
+      },
+      {
+        "command": "skill-manager.linkTool",
+        "title": "Skill Manager: 链接指定工具",
+        "icon": "$(link)"
+      },
+      {
+        "command": "skill-manager.unlinkTool",
+        "title": "Skill Manager: 取消工具链接",
+        "icon": "$(debug-disconnect)"
+      },
+      {
+        "command": "skill-manager.showStatus",
+        "title": "Skill Manager: 查看链接状态",
+        "icon": "$(info)"
+      },
+      {
+        "command": "skill-manager.openWarehouse",
+        "title": "Skill Manager: 打开中央仓库目录",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "skill-manager.refreshSkills",
+        "title": "Skill Manager: 刷新 Skills 列表",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "skill-manager.createSkill",
+        "title": "Skill Manager: 创建新 Skill",
+        "icon": "$(new-file)"
+      },
+      {
+        "command": "skill-manager.openPanel",
+        "title": "Skill Manager: 打开管理面板",
+        "icon": "$(dashboard)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "skill-manager-container",
+          "title": "Skill Manager",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "skill-manager-container": [
+        {
+          "type": "webview",
+          "id": "skillManager.mainView",
+          "name": "Skills"
+        }
+      ],
+      "explorer": [
+        {
+          "id": "skillManagerSkills",
+          "name": "Skills",
+          "icon": "$(file-code)",
+          "contextualTitle": "AI Skills"
+        },
+        {
+          "id": "skillManagerTools",
+          "name": "工具链接",
+          "icon": "$(extensions)",
+          "contextualTitle": "已配置的工具"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "skill-manager.refreshSkills",
+          "when": "view == skillManagerSkills",
+          "group": "navigation"
+        },
+        {
+          "command": "skill-manager.createSkill",
+          "when": "view == skillManagerSkills",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "skill-manager.linkTool",
+          "when": "view == skillManagerTools && viewItem == tool",
+          "group": "inline"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Skill Manager",
+      "properties": {
+        "skillManager.centralWarehousePath": {
+          "type": "string",
+          "default": "",
+          "description": "中央仓库路径 (默认为 ~/.agent/skills)"
+        },
+        "skillManager.autoInitialize": {
+          "type": "boolean",
+          "default": true,
+          "description": "启动时自动初始化中央仓库"
+        },
+        "skillManager.toolPaths": {
+          "type": "object",
+          "default": {},
+          "description": "自定义各工具的 Skills 路径配置",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "watch": "npm-run-all -p watch:*",
+    "watch:esbuild": "node esbuild.js --watch",
+    "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
+    "package": "npm run check-types && npm run lint && node esbuild.js --production",
+    "compile-tests": "tsc -p . --outDir out",
+    "watch-tests": "tsc -p . -w --outDir out",
+    "pretest": "npm run compile-tests && npm run compile && npm run lint",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "typescript-eslint": "^8.52.0",
+    "eslint": "^9.39.2",
+    "esbuild": "^0.27.2",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.9.3",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2"
+  }
+}

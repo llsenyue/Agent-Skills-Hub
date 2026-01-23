@@ -78,7 +78,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
 	// 显示欢迎信息
 	vscode.window.showInformationMessage(
-		'Skill Manager 已就绪。使用命令面板 (Ctrl+Shift+P) 搜索 "Skill Manager" 开始使用。'
+		'Agent Skills Hub 已就绪。使用命令面板 (Ctrl+Shift+P) 搜索 "Agent Skills Hub" 开始使用。'
 	);
 }
 

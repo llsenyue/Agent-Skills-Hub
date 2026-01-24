@@ -1,8 +1,9 @@
+```json
 {
   "name": "agent-skills-hub",
   "displayName": "Agent Skills Hub",
   "description": "Centralized management for AI Agent Skills and local tool configurations. Supports Antigravity, Claude, Windsurf, Gemini CLI, etc.",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "icon": "icon.png",
   "publisher": "llsenyue",
   "repository": {

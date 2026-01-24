@@ -277,6 +277,30 @@ export function getTopSkills(skills: MarketplaceSkill[], limit: number = 50): Ma
 }
 
 /**
+ * 递归搜索包含 SKILL.md 的目录
+ */
+async function findSkillDirs(dir: string, maxDepth: number = 5): Promise<string[]> {
+    const results: string[] = [];
+    async function search(currentDir: string, depth: number) {
+        if (depth > maxDepth || !fs.existsSync(currentDir)) return;
+        try {
+            if (fs.existsSync(path.join(currentDir, 'SKILL.md'))) {
+                results.push(currentDir);
+                return;
+            }
+            const entries = await fs.promises.readdir(currentDir, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isDirectory() && entry.name !== '.git' && entry.name !== 'node_modules' && entry.name !== 'dist') {
+                    await search(path.join(currentDir, entry.name), depth + 1);
+                }
+            }
+        } catch (e) { }
+    }
+    await search(dir, 0);
+    return results;
+}
+
+/**
  * 从市场安装技能
  * 注意：市场安装只会将技能复制到中央仓，不会添加到GitHub来源管理列表
  * 如需添加到来源管理，请使用"从GitHub导入"功能
@@ -289,40 +313,92 @@ export async function installMarketplaceSkill(skill: MarketplaceSkill): Promise<
 
     try {
         // 解析 GitHub URL
-        const urlMatch = skill.githubUrl.match(/github\.com\/([^\/]+)\/([^\/\s#?]+)/i);
-        if (!urlMatch) {
-            return { success: false, message: `无效的 GitHub URL: ${skill.githubUrl}` };
+        // 模式 1: 树形 URL (例如 .../tree/main/path/to/skill)
+        const treeMatch = skill.githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)\/tree\/([^\/]+)\/(.+)/i);
+        // 模式 2: 标准 URL (例如 .../owner/repo)
+        const stdMatch = skill.githubUrl.match(/github\.com\/([^\/]+)\/([^\/\s#?]+)/i);
+
+        let owner: string, repo: string, urlPath: string | undefined, urlBranch: string | undefined;
+
+        if (treeMatch) {
+            owner = treeMatch[1];
+            repo = treeMatch[2];
+            urlBranch = treeMatch[3];
+            urlPath = treeMatch[4];
+        } else if (stdMatch) {
+            owner = stdMatch[1];
+            repo = stdMatch[2].replace(/\.git$/i, '');
+        } else {
+            return { success: false, message: `无法识别的 GitHub URL: ${skill.githubUrl}` };
         }
-        const owner = urlMatch[1];
-        const repo = urlMatch[2].replace(/\.git$/i, '');
 
         // 使用临时目录克隆仓库
-        const tempDir = path.join(os.tmpdir(), `skill-install-${Date.now()}`);
+        const cloneUrl = `https://github.com/${owner}/${repo}.git`;
+        // 第一阶段：克隆仓库
+        // 我们需要找到一个有效的目录来存放代码
+        let finalTempDir = '';
 
         try {
-            // 克隆仓库
-            const cloneUrl = `https://github.com/${owner}/${repo}.git`;
-            const branch = skill.branch || 'main';
+            // 模式 1: 如果有明确子路径 (来自 URL)，启用极速“稀疏检出”模式
+            // 这是解决大型仓库（如 PyTorch）的银弹：只下载需要的文件夹，不检出几万个无关文件
+            const targetBranch = urlBranch || skill.branch;
+            const targetSubPath = urlPath || (skill.path !== '.' ? skill.path : undefined);
 
-            await execAsync(`git clone --depth 1 --branch "${branch}" "${cloneUrl}" "${tempDir}"`).catch(async () => {
-                // 如果 main 分支失败，尝试 master
-                await execAsync(`git clone --depth 1 --branch "master" "${cloneUrl}" "${tempDir}"`);
-            });
+            if (targetSubPath) {
+                try {
+                    const sparseTempDir = path.join(os.tmpdir(), `skill-install-${Date.now()}-sparse`);
+                    console.log(`[Install] 检测到特定路径，启用稀疏检出极速模式: ${targetSubPath}`);
 
-            // 确定要扫描的目录
-            let scanRoot = tempDir;
-            if (skill.path && skill.path !== '.') {
-                scanRoot = path.join(tempDir, skill.path);
+                    // 1. 克隆但不检出文件
+                    const cloneCmd = targetBranch
+                        ? `git clone --depth 1 --filter=blob:none --sparse --branch "${targetBranch}" "${cloneUrl}" "${sparseTempDir}"`
+                        : `git clone --depth 1 --filter=blob:none --sparse "${cloneUrl}" "${sparseTempDir}"`;
+
+                    await execAsync(cloneCmd);
+
+                    // 2. 精准设置要拉取的目录
+                    const sparseDir = targetSubPath.endsWith('SKILL.md') ? path.dirname(targetSubPath) : targetSubPath;
+                    await execAsync(`git -C "${sparseTempDir}" sparse-checkout set "${sparseDir}"`);
+
+                    finalTempDir = sparseTempDir;
+                } catch (e: any) {
+                    console.warn(`[Install] 稀疏检出失败: ${e.message}，将回退到普通克隆...`);
+                }
             }
 
-            // 如果指定路径不存在，尝试常见目录
-            if (!fs.existsSync(scanRoot)) {
-                const possiblePaths = [
+            // 模式 2: 普通浅克隆（用于兜底或无特定路径的情况）
+            if (!finalTempDir) {
+                const headTempDir = path.join(os.tmpdir(), `skill-install-${Date.now()}-default`);
+                await execAsync(`git clone --depth 1 --filter=blob:none "${cloneUrl}" "${headTempDir}"`);
+                finalTempDir = headTempDir;
+            }
+        } catch (error: any) {
+            console.error(`[Install] 所有克隆尝试均失败: ${error.message}`);
+            return { success: false, message: `无法连接到仓库: ${error.message}\n建议：检查网络连接或手动验证该链接是否有效。` };
+        }
+
+        const tempDir = finalTempDir;
+
+        try {
+            // 确定扫描根目录
+            // 优先级：1. 从 URL 提取的路径 2. 技能元数据中的路径 3. 仓库根目录
+            let scanRoot = tempDir;
+            const targetSubPath = urlPath || skill.path;
+
+            if (targetSubPath && targetSubPath !== '.' && targetSubPath !== 'SKILL.md') {
+                // 如果路径包含文件名，则取其父目录
+                const cleanSubPath = targetSubPath.endsWith('SKILL.md') ? path.dirname(targetSubPath) : targetSubPath;
+                scanRoot = path.join(tempDir, cleanSubPath);
+            }
+
+            // 兜底策略 1: 检查常见目录
+            if (!fs.existsSync(scanRoot) || !fs.existsSync(path.join(scanRoot, 'SKILL.md'))) {
+                const commonPaths = [
                     path.join(tempDir, 'skills'),
                     path.join(tempDir, '.claude', 'skills'),
-                    path.join(tempDir, '.agent', 'skills'),
+                    path.join(tempDir, '.agent', 'skills')
                 ];
-                for (const p of possiblePaths) {
+                for (const p of commonPaths) {
                     if (fs.existsSync(p)) {
                         scanRoot = p;
                         break;
@@ -330,75 +406,62 @@ export async function installMarketplaceSkill(skill: MarketplaceSkill): Promise<
                 }
             }
 
-            // 导入技能到中央仓
+            // 导入准备
             const enabledPath = getSkillsPath();
             const disabledPath = getDisabledPath();
-
-            // 确保目录存在
-            if (!fs.existsSync(enabledPath)) {
-                await fs.promises.mkdir(enabledPath, { recursive: true });
-            }
-            if (!fs.existsSync(disabledPath)) {
-                await fs.promises.mkdir(disabledPath, { recursive: true });
-            }
+            if (!fs.existsSync(enabledPath)) await fs.promises.mkdir(enabledPath, { recursive: true });
+            if (!fs.existsSync(disabledPath)) await fs.promises.mkdir(disabledPath, { recursive: true });
 
             let installedCount = 0;
 
-            // 检查根目录是否就是一个技能
-            if (fs.existsSync(path.join(scanRoot, 'SKILL.md'))) {
-                const skillName = skill.name || path.basename(scanRoot);
-                // 检查是否已存在于激活目录（不覆盖激活目录的技能）
-                const enabledSkillPath = path.join(enabledPath, skillName);
-                const disabledSkillPath = path.join(disabledPath, skillName);
-
-                if (fs.existsSync(enabledSkillPath)) {
-                    // 已存在于激活目录，覆盖
-                    await copyDirectory(scanRoot, enabledSkillPath);
+            // 策略 A: 直接检查 scanRoot (支持单技能和多技能目录)
+            if (fs.existsSync(scanRoot)) {
+                if (fs.existsSync(path.join(scanRoot, 'SKILL.md'))) {
+                    // 情况 1: scanRoot 本身就是一个技能
+                    const skillName = skill.name || path.basename(scanRoot);
+                    const destPath = fs.existsSync(path.join(enabledPath, skillName)) ? path.join(enabledPath, skillName) : path.join(disabledPath, skillName);
+                    await copyDirectory(scanRoot, destPath);
+                    installedCount = 1;
                 } else {
-                    // 新技能或已存在于未激活目录，放到未激活目录
-                    await copyDirectory(scanRoot, disabledSkillPath);
-                }
-                installedCount = 1;
-            } else if (fs.existsSync(scanRoot)) {
-                // 扫描子目录查找技能
-                const entries = await fs.promises.readdir(scanRoot, { withFileTypes: true });
-                for (const entry of entries) {
-                    if (entry.isDirectory() && !entry.name.startsWith('.')) {
-                        const skillDir = path.join(scanRoot, entry.name);
-                        if (fs.existsSync(path.join(skillDir, 'SKILL.md'))) {
-                            const skillName = entry.name;
-                            const enabledSkillPath = path.join(enabledPath, skillName);
-                            const disabledSkillPath = path.join(disabledPath, skillName);
-
-                            if (fs.existsSync(enabledSkillPath)) {
-                                // 已存在于激活目录，覆盖
-                                await copyDirectory(skillDir, enabledSkillPath);
-                            } else {
-                                // 新技能，放到未激活目录
-                                await copyDirectory(skillDir, disabledSkillPath);
+                    // 情况 2: scanRoot 是包含多个技能的目录
+                    const entries = await fs.promises.readdir(scanRoot, { withFileTypes: true });
+                    for (const entry of entries) {
+                        if (entry.isDirectory() && !entry.name.startsWith('.')) {
+                            const skillDir = path.join(scanRoot, entry.name);
+                            if (fs.existsSync(path.join(skillDir, 'SKILL.md'))) {
+                                const destPath = fs.existsSync(path.join(enabledPath, entry.name)) ? path.join(enabledPath, entry.name) : path.join(disabledPath, entry.name);
+                                await copyDirectory(skillDir, destPath);
+                                installedCount++;
                             }
-                            installedCount++;
                         }
                     }
                 }
             }
 
-            // 清理临时目录
-            await fs.promises.rm(tempDir, { recursive: true, force: true });
+            // 策略 B: 深度递归搜索 (兜底)
+            if (installedCount === 0) {
+                console.log(`[Install] 快速路径未找到技能，启动深度搜索: ${tempDir}`);
+                const skillDirs = await findSkillDirs(tempDir, 5);
+                for (const skillDir of skillDirs) {
+                    const skillName = path.basename(skillDir);
+                    const destPath = fs.existsSync(path.join(enabledPath, skillName)) ? path.join(enabledPath, skillName) : path.join(disabledPath, skillName);
+                    await copyDirectory(skillDir, destPath);
+                    installedCount++;
+                }
+            }
+
+            // 清理临时文件 (统一清理逻辑)
+            if (fs.existsSync(tempDir)) {
+                await fs.promises.rm(tempDir, { recursive: true, force: true });
+            }
 
             if (installedCount > 0) {
-                return {
-                    success: true,
-                    message: `成功安装 ${skill.name} (${installedCount} 个技能)`
-                };
+                return { success: true, message: `成功安装 ${skill.name} (${installedCount} 个技能)` };
             } else {
-                return {
-                    success: false,
-                    message: `未找到有效的技能（需要包含 SKILL.md 文件）`
-                };
+                return { success: false, message: `未找到有效的 SKILL.md 文件\n已尝试路径项目: ${scanRoot}` };
             }
         } catch (error) {
-            // 清理临时目录
+            // 发生异常时的清理
             if (fs.existsSync(tempDir)) {
                 await fs.promises.rm(tempDir, { recursive: true, force: true });
             }
@@ -417,9 +480,16 @@ export async function installMarketplaceSkill(skill: MarketplaceSkill): Promise<
 async function execAsync(command: string): Promise<string> {
     const { exec } = require('child_process');
     return new Promise((resolve, reject) => {
-        exec(command, { maxBuffer: 10 * 1024 * 1024 }, (error: Error | null, stdout: string, stderr: string) => {
+        // 增加 maxBuffer 到 20MB 应对大型仓库的输出，同时添加环境变量优化
+        exec(command, {
+            maxBuffer: 20 * 1024 * 1024,
+            env: { ...process.env, GIT_TERMINAL_PROMPT: '0' } // 禁止弹出凭据提示
+        }, (error: Error | null, stdout: string, stderr: string) => {
             if (error) {
-                reject(error);
+                // 将 stderr 包含在错误信息中，方便用户看到具体的 git 报错（如网络问题或权限问题）
+                const wrappedError = new Error(stderr || error.message);
+                (wrappedError as any).originalError = error;
+                reject(wrappedError);
             } else {
                 resolve(stdout);
             }

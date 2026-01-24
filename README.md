@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.7-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.1.10-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/design-Apple_Style-007aff.svg" alt="Apple Style UI">
   <img src="https://img.shields.io/badge/language-TypeScript-blue.svg" alt="TypeScript">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">

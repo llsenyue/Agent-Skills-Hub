@@ -5,6 +5,29 @@ All notable changes to **Agent Skills Hub** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-01-24
+
+### Added
+
+- 🎨 **Apple Design Language**: 全面应用苹果设计语言
+  - 添加完整的 CSS 设计系统变量（颜色、圆角、间距）
+  - 14 个 UI 组件升级：更圆润的圆角、统一的苹果蓝主色、精致的悬停效果
+  - 技能卡片：12px 圆角 + 蓝色边框 + 阴影悬停
+  - 统计数字：28px 大字号 + 卡片背景
+  - 工具配置：绿色已链接边框 + 工具图标
+
+### Fixed
+
+- 🐛 **技能卡片按钮对齐**: 修复描述长度不同导致按钮错位（使用 Flexbox 布局）
+- 🐛 **禁用徽章文字不可见**: 修复白色文字在白色背景上不可见的问题
+- 🐛 **禁用技能失败**: 修复 `safeMove is not defined` 错误
+  - 实现安全移动函数，采用复制+删除策略
+  - 添加重试机制，解决 Windows 文件占用问题
+- 🐛 **GitHub 源同步按钮重复图标**: 移除按钮中的重复 emoji
+- 🐛 **技能列表排序**: 修复"全部"筛选时按激活状态排序的问题
+  - 现在始终按名称排序（localeCompare）
+  - 禁用/激活技能后保持排序顺序
+
 ## [0.1.6] - 2026-01-23
 
 ### Changed

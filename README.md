@@ -1,18 +1,46 @@
 # 🎯 Agent Skills Hub
 
 <p align="center">
-  <img src="docs/images/my-skills-enabled.png" alt="Agent Skills Hub - 我的技能" width="800">
+  <img src="media/icon.svg" alt="Agent Skills Hub Logo" width="120" height="120">
 </p>
 
-**Agent Skills Hub** 是一个 VS Code 扩展，用于集中管理多个 AI Agent 工具的 Skills。通过统一的中央仓库，轻松实现 Skills 的跨工具共享、版本同步和一键激活。
+<p align="center">
+  <strong>集中管理 AI Agent Skills 的优雅解决方案</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.1.6-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/design-Apple_Style-007aff.svg" alt="Apple Style UI">
+  <img src="https://img.shields.io/badge/language-TypeScript-blue.svg" alt="TypeScript">
+  <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
+</p>
+
+---
+
+**Agent Skills Hub** 是一个采用 **苹果设计风格** 的 VS Code 扩展,用于集中管理多个 AI Agent 工具的 Skills。通过统一的中央仓库,轻松实现 Skills 的跨工具共享、版本同步和一键激活。
+
+### 🎨 设计亮点
+
+- ✨ **苹果设计语言** - 圆润卡片、系统配色、流畅动画
+- 💎 **精致 UI** - 12px 圆角、渐变透明、优雅过渡效果
+- 🎯 **清晰层次** - iOS 风格图标、彩色状态徽章、大数字统计
 
 ## ✨ 核心特性
 
+### 🎨 视觉与交互
+
+- 💫 **苹果风格 UI** - 采用 iOS 设计语言,圆润卡片、系统配色
+- ✨ **流畅动画** - 300ms 淡入淡出、悬停浮动窗口效果
+- 📊 **数据可视化** - 大数字统计、趋势指示、彩色图标
+
+### 🛠️ 功能特性
+
 - 🏠 **中央仓库** - 所有 Skills 统一存储在 `~/.agent/skills`
 - 🔗 **多工具支持** - 支持 Claude Code、Gemini CLI、Antigravity、Windsurf、OpenCode、Codex CLI
-- 🛒 **技能市场** - 浏览 65,000+ 开源 Skills，一键安装
-- � **国际化** - 支持中英文界面切换
+- 🛒 **技能市场** - 浏览 65,000+ 开源 Skills,一键安装
+- 🌐 **国际化** - 支持中英文界面无缝切换
 - 📦 **GitHub 导入** - 直接从 GitHub 仓库导入 Skills
+- 📝 **备注系统** - 为每个 Skill 添加个性化备注
 
 ## 📸 界面预览
 

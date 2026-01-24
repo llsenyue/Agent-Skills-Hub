@@ -86,20 +86,20 @@ async function extractDescriptionFromDir(dirPath: string): Promise<string> {
 async function scanDirectory(dirPath: string, isEnabled: boolean): Promise<SkillInfo[]> {
     const skills: SkillInfo[] = [];
 
-    if (!fs.existsSync(dirPath)) {return skills;}
+    if (!fs.existsSync(dirPath)) { return skills; }
 
     try {
         const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
 
         for (const entry of entries) {
             // 跳过隐藏目录和非目录
-            if (!entry.isDirectory() || entry.name.startsWith('.')) {continue;}
+            if (!entry.isDirectory() || entry.name.startsWith('.')) { continue; }
 
             const fullPath = path.join(dirPath, entry.name);
             const skillMdPath = path.join(fullPath, 'SKILL.md');
 
             // 官方标准：只识别包含 SKILL.md 的目录
-            if (!fs.existsSync(skillMdPath)) {continue;}
+            if (!fs.existsSync(skillMdPath)) { continue; }
 
             const description = await extractDescriptionFromDir(fullPath);
 
@@ -164,11 +164,11 @@ export async function enableSkill(skillName: string): Promise<boolean> {
     }
 
     try {
-        await fs.promises.rename(srcPath, destPath);
+        await safeMove(srcPath, destPath);
         return true;
-    } catch (error) {
+    } catch (error: any) {
         console.error(`激活 Skill "${skillName}" 失败:`, error);
-        throw error;
+        throw new Error(`激活技能失败: ${error.message}`);
     }
 }
 
@@ -188,11 +188,82 @@ export async function disableSkill(skillName: string): Promise<boolean> {
     }
 
     try {
-        await fs.promises.rename(srcPath, destPath);
+        await safeMove(srcPath, destPath);
         return true;
-    } catch (error) {
+    } catch (error: any) {
         console.error(`禁用 Skill "${skillName}" 失败:`, error);
-        throw error;
+        throw new Error(`禁用技能失败: ${error.message}`);
+    }
+}
+
+/**
+ * 递归删除目录（带重试机制）
+ */
+async function removeDirectory(dirPath: string, retries = 3, delayMs = 100): Promise<void> {
+    for (let i = 0; i < retries; i++) {
+        try {
+            // 递归读取目录
+            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+            // 先删除所有子项
+            for (const entry of entries) {
+                const fullPath = path.join(dirPath, entry.name);
+                if (entry.isDirectory()) {
+                    await removeDirectory(fullPath, retries, delayMs);
+                } else {
+                    await fs.promises.unlink(fullPath);
+                }
+            }
+
+            // 删除空目录
+            await fs.promises.rmdir(dirPath);
+            return; // 成功则返回
+        } catch (error: any) {
+            if (i === retries - 1) {
+                // 最后一次重试仍然失败
+                throw error;
+            }
+            // 等待后重试
+            await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+        }
+    }
+}
+
+/**
+ * 安全移动目录（使用复制+删除策略，避免Windows文件占用问题）
+ */
+async function safeMove(srcPath: string, destPath: string): Promise<void> {
+    // 如果目标已存在，先删除
+    if (fs.existsSync(destPath)) {
+        await removeDirectory(destPath);
+    }
+
+    try {
+        // 1. 先尝试直接重命名（最快）
+        await fs.promises.rename(srcPath, destPath);
+        return;
+    } catch (renameError: any) {
+        console.log(`重命名失败，使用复制+删除策略: ${renameError.message}`);
+
+        // 2. 如果重命名失败，使用复制+删除策略
+        try {
+            // 复制整个目录
+            await copyDirectory(srcPath, destPath);
+
+            // 等待一小段时间，确保文件系统释放句柄
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            // 删除源目录
+            await removeDirectory(srcPath);
+        } catch (error: any) {
+            // 如果复制成功但删除失败，至少目标已经创建了
+            if (fs.existsSync(destPath)) {
+                console.warn(`目标已复制成功，但源目录删除失败: ${error.message}`);
+                console.warn(`请手动删除源目录: ${srcPath}`);
+                return;
+            }
+            throw error;
+        }
     }
 }
 

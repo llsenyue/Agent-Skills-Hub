@@ -301,7 +301,10 @@ export class SkillsWebviewPanel {
                 this._skills = this._allSkills.filter(s => !s.isEnabled);
                 break;
             default:
-                this._skills = this._allSkills;
+                // "全部"筛选时，按名称排序
+                this._skills = [...this._allSkills].sort((a, b) =>
+                    a.name.localeCompare(b.name, 'zh-CN')
+                );
         }
 
         this._tools = await detectTools();
@@ -817,7 +820,10 @@ export class SkillsWebviewPanel {
                 this._skills = this._allSkills.filter(s => !s.isEnabled);
                 break;
             default:
-                this._skills = this._allSkills;
+                // "全部"筛选时，按名称排序而不是按激活状态
+                this._skills = [...this._allSkills].sort((a, b) =>
+                    a.name.localeCompare(b.name, 'zh-CN')
+                );
         }
         this._updateWebview();
     }
@@ -934,6 +940,33 @@ export class SkillsWebviewPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${t.appTitle}</title>
     <style>
+        /* === 苹果设计系统 CSS 变量 === */
+        :root {
+            /* 苹果系统色 */
+            --apple-blue: #007aff;
+            --apple-green: #34c759;
+            --apple-orange: #ff9500;
+            --apple-red: #ff3b30;
+            --apple-purple: #af52de;
+            
+            /* 中性色 */
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --bg-card: #ffffff;
+            --bg-secondary: #f5f5f7;
+            --border-color: #e5e5e7;
+            
+            /* 圆角 */
+            --radius-card: 12px;
+            --radius-button: 8px;
+            --radius-badge: 12px;
+            
+            /* 间距 */
+            --spacing-sm: 12px;
+            --spacing-md: 16px;
+            --spacing-lg: 20px;
+        }
+        
         * {
             margin: 0;
             padding: 0;
@@ -953,54 +986,66 @@ export class SkillsWebviewPanel {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--vscode-panel-border);
+            margin-bottom: var(--spacing-lg);
+            padding: 20px;
+            background: var(--bg-card, transparent);
+            border-radius: var(--radius-card);
+            border-bottom: none;
         }
         .header h1 {
             font-size: 20px;
-            font-weight: 600;
+            font-weight: 700;
             display: flex;
             align-items: center;
             gap: 8px;
+            color: var(--text-primary, var(--vscode-foreground));
         }
         .header-actions {
             display: flex;
             gap: 8px;
         }
         .btn {
-            padding: 8px 16px;
+            padding: 8px 24px;
             border: none;
-            border-radius: 4px;
+            border-radius: var(--radius-button);
             cursor: pointer;
             font-size: 13px;
+            font-weight: 500;
             display: flex;
             align-items: center;
             gap: 6px;
+            transition: all 0.2s ease;
         }
         .btn-primary {
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
+            background: var(--apple-blue, var(--vscode-button-background));
+            color: #ffffff;
         }
         .btn-primary:hover {
-            background: var(--vscode-button-hoverBackground);
+            background: #0056d6;
+            transform: translateY(-1px);
         }
         .btn-secondary {
-            background: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
+            background: var(--bg-secondary, var(--vscode-button-secondaryBackground));
+            color: var(--text-primary, var(--vscode-button-secondaryForeground));
+        }
+        .btn-secondary:hover {
+            background: #e8e8ea;
         }
         .search-box {
             width: 100%;
-            padding: 10px 14px;
-            border: 1px solid var(--vscode-input-border);
-            background: var(--vscode-input-background);
+            padding: 12px 16px;
+            border: 1px solid var(--border-color, var(--vscode-input-border));
+            background: var(--bg-card, var(--vscode-input-background));
             color: var(--vscode-input-foreground);
-            border-radius: 6px;
+            border-radius: 10px;
             font-size: 14px;
             margin-bottom: 16px;
+            transition: all 0.2s ease;
         }
         .search-box:focus {
-            outline: 2px solid var(--vscode-focusBorder);
+            outline: none;
+            border-color: var(--apple-blue, var(--vscode-focusBorder));
+            box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
         }
         .tabs {
             display: flex;
@@ -1008,43 +1053,45 @@ export class SkillsWebviewPanel {
             margin-bottom: 16px;
         }
         .tab {
-            padding: 8px 16px;
+            padding: 10px 18px;
             border: none;
             background: transparent;
             color: var(--vscode-foreground);
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: var(--radius-button);
             font-size: 13px;
             font-weight: 500;
+            transition: all 0.2s ease;
         }
         .tab:hover {
-            background: var(--vscode-list-hoverBackground);
+            background: var(--bg-secondary, var(--vscode-list-hoverBackground));
         }
         .tab.active {
-            background: var(--vscode-button-background);
-            color: var(--vscode-button-foreground);
+            background: var(--apple-blue, var(--vscode-button-background));
+            color: #ffffff;
         }
         .stats {
             display: flex;
-            gap: 24px;
-            margin-bottom: 20px;
-            padding: 12px 16px;
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            border-radius: 8px;
+            gap: 20px;
+            margin-bottom: var(--spacing-lg);
+            padding: 16px 20px;
+            background: var(--bg-card, var(--vscode-editor-inactiveSelectionBackground));
+            border-radius: var(--radius-card);
+            border: 1px solid var(--border-color, transparent);
         }
         .stat {
             display: flex;
             flex-direction: column;
-            gap: 2px;
+            gap: 4px;
         }
         .stat-label {
-            font-size: 12px;
-            color: var(--vscode-descriptionForeground);
+            font-size: 13px;
+            color: var(--text-secondary, var(--vscode-descriptionForeground));
         }
         .stat-value {
-            font-size: 20px;
-            font-weight: 600;
-            color: var(--vscode-foreground);
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary, var(--vscode-foreground));
         }
         .skills-grid {
             display: grid;
@@ -1052,17 +1099,28 @@ export class SkillsWebviewPanel {
             gap: 12px;
         }
         .skill-card {
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 8px;
-            padding: 16px;
+            background: var(--bg-card, var(--vscode-editor-inactiveSelectionBackground));
+            border: 1.5px solid var(--border-color, var(--vscode-panel-border));
+            border-radius: var(--radius-card);
+            padding: var(--spacing-lg);
             cursor: pointer;
-            transition: all 0.15s;
+            transition: all 0.2s ease;
+            min-height: 180px;
+            /* 使用 flex 布局让按钮固定在底部 */
+            display: flex;
+            flex-direction: column;
         }
         .skill-card:hover {
-            background: var(--vscode-list-hoverBackground);
-            border-color: var(--vscode-focusBorder);
+            background: var(--bg-card, var(--vscode-list-hoverBackground));
+            border-color: var(--apple-blue, var(--vscode-focusBorder));
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        .skill-card.enabled-card {
+            border: 2px solid var(--apple-blue);
+        }
+        .skill-card.disabled {
+            opacity: 0.85;
         }
         .skill-header {
             display: flex;
@@ -1076,33 +1134,32 @@ export class SkillsWebviewPanel {
             color: var(--vscode-textLink-foreground);
         }
         .skill-badge {
-            font-size: 10px;
-            padding: 3px 8px;
-            border-radius: 12px;
-            background: var(--vscode-badge-background);
-            color: var(--vscode-badge-foreground);
+            font-size: 11px;
+            padding: 5px 12px;
+            border-radius: var(--radius-badge);
             font-weight: 500;
+            white-space: nowrap;
         }
         .skill-badge.installed {
-            background: #2ea043;
+            background: var(--apple-green);
             color: white;
         }
         .skill-badge.enabled {
-            background: #2ea043;
+            background: var(--apple-green);
             color: white;
         }
         .skill-badge.disabled {
-            background: var(--vscode-disabledForeground);
-            color: var(--vscode-editor-background);
+            background: rgba(134, 134, 139, 0.15); /* 半透明灰色背景 */
+            color: var(--text-secondary); /* 正常颜色的文字 */
         }
         .skill-card.disabled {
-            opacity: 0.7;
-            border-style: dashed;
+            opacity: 0.95; /* 轻微降低透明度,不要太灰 */
+            /* border-style: dashed; 移除虚线边框 */
         }
         .skill-actions {
             display: flex;
             gap: 8px;
-            margin-top: 8px;
+            margin-top: auto; /* 推到底部 */
         }
         .skill-actions .btn {
             flex: 1;
@@ -1129,6 +1186,8 @@ export class SkillsWebviewPanel {
             color: var(--vscode-descriptionForeground);
             line-height: 1.5;
             margin-bottom: 8px;
+            /* 自动填充剩余空间,把按钮推到底部 */
+            flex: 1;
         }
         .skill-note {
             font-size: 11px;
@@ -1184,42 +1243,80 @@ export class SkillsWebviewPanel {
             display: flex;
             gap: 8px;
         }
-        /* Tool Card Styles */
+        /* Tool Card Styles - 苹果风格优化 */
         .tool-card {
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 8px;
-            padding: 16px;
+            background: var(--bg-card, var(--vscode-editor-inactiveSelectionBackground));
+            border: 1.5px solid var(--border-color, var(--vscode-panel-border));
+            border-radius: var(--radius-card);
+            padding: var(--spacing-lg);
             display: flex;
             flex-direction: column;
             gap: 12px;
+            transition: all 0.2s ease;
+            min-height: 140px;
+        }
+        /* 已连接工具 - 绿色边框 */
+        .tool-card.linked {
+            border: 2px solid var(--apple-green);
+            background: var(--bg-card, #ffffff);
+        }
+        /* 未连接工具 - 灰色背景 */
+        .tool-card.unlinked {
+            background: var(--bg-secondary, #f5f5f7);
         }
         .tool-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            gap: 12px;
+        }
+        /* 工具图标 40x40px 圆形 */
+        .tool-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background: var(--apple-blue);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ffffff;
+            flex-shrink: 0;
+        }
+        .tool-icon.unlinked {
+            background: var(--text-secondary);
+            opacity: 0.3;
+        }
+        .tool-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
         }
         .tool-name {
             font-size: 16px;
             font-weight: 600;
+            color: var(--text-primary, var(--vscode-foreground));
+        }
+        .tool-name.unlinked {
+            color: var(--text-secondary);
         }
         .tool-status {
-            font-size: 12px;
+            font-size: 13px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
+        }
+        .tool-status.linked {
+            color: var(--apple-green);
+        }
+        .tool-status.unlinked {
+            color: var(--text-secondary);
         }
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
-            background: var(--vscode-disabledForeground);
-        }
-        .status-dot.linked {
-            background: #2ea043;
-        }
-        .status-dot.unlinked {
-            background: #d73a49;
         }
         .skills-count {
             background: var(--vscode-badge-background);
@@ -1227,16 +1324,26 @@ export class SkillsWebviewPanel {
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 11px;
-            margin-right: 8px;
         }
+        /* 路径信息 - 优化样式 */
         .tool-path {
-            font-size: 12px;
-            color: var(--vscode-descriptionForeground);
-            background: var(--vscode-textBlockQuote-background);
-            padding: 8px;
-            border-radius: 4px;
-            word-break: break-all;
-            font-family: monospace;
+            font-size: 13px;
+            color: var(--text-secondary, var(--vscode-descriptionForeground));
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tool-path-text {
+            font-family: 'Consolas', 'Monaco', monospace;
+        }
+        .open-folder-icon {
+            font-size: 13px;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .open-folder-icon:hover {
+            opacity: 1;
         }
         .tool-actions {
             display: flex;
@@ -1285,16 +1392,21 @@ export class SkillsWebviewPanel {
             color: var(--vscode-button-foreground);
         }
         .marketplace-card {
-            background: var(--vscode-editor-inactiveSelectionBackground);
-            border: 1px solid var(--vscode-panel-border);
-            border-radius: 8px;
-            padding: 16px;
-            transition: all 0.15s;
+            background: var(--bg-card, var(--vscode-editor-inactiveSelectionBackground));
+            border: 1.5px solid var(--border-color, var(--vscode-panel-border));
+            border-radius: var(--radius-card);
+            padding: var(--spacing-md);
+            transition: all 0.2s ease;
+            min-height: 200px;
+            /* Flex 布局让按钮对齐 */
+            display: flex;
+            flex-direction: column;
         }
         .marketplace-card:hover {
-            background: var(--vscode-list-hoverBackground);
-            border-color: var(--vscode-focusBorder);
+            background: var(--bg-card, var(--vscode-list-hoverBackground));
+            border-color: var(--apple-blue, var(--vscode-focusBorder));
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
         .marketplace-card.installed {
             border-color: #2ea043;
@@ -1839,7 +1951,7 @@ export class SkillsWebviewPanel {
                             <span class="source-status">\${statusIcon}</span>
                         </div>
                         <div class="source-actions" style="display: flex; gap: 8px;">
-                            <button class="btn btn-primary btn-sm" onclick="vscode.postMessage({type: 'syncSource', sourceId: '\${source.id}'})">🔄 \${i18n.sync}</button>
+                            <button class="btn btn-primary btn-sm" onclick="vscode.postMessage({type: 'syncSource', sourceId: '\${source.id}'})">\${i18n.sync}</button>
                             <button class="btn btn-secondary btn-sm" onclick="vscode.postMessage({type: 'removeSource', sourceId: '\${source.id}'})">\${i18n.deleteSource}</button>
                         </div>
                     </div>

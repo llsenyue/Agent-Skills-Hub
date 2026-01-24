@@ -1,7 +1,7 @@
 # 🎯 Agent Skills Hub
 
 <p align="center">
-  <img src="media/icon.svg" alt="Agent Skills Hub Logo" width="120" height="120">
+  <img src="https://raw.githubusercontent.com/llsenyue/Agent-Skills-Hub/main/skill-manager-extension/icon.png" alt="Agent Skills Hub Logo" width="120" height="120">
 </p>
 
 <p align="center">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.6-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.1.7-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/design-Apple_Style-007aff.svg" alt="Apple Style UI">
   <img src="https://img.shields.io/badge/language-TypeScript-blue.svg" alt="TypeScript">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">

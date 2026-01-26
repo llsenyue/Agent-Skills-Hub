@@ -1,7 +1,7 @@
 # 🎯 Agent Skills Hub
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/llsenyue/Agent-Skills-Hub/main/skill-manager-extension/icon.png" alt="Agent Skills Hub Logo" width="120" height="120">
+  <img src="icon.png" alt="Agent Skills Hub Logo" width="120" height="120">
 </p>
 
 <p align="center">

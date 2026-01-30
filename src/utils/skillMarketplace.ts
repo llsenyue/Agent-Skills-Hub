@@ -192,14 +192,14 @@ export function searchMarketplaceSkills(skills: MarketplaceSkill[], query: strin
     const allTermsMatch = (skill: MarketplaceSkill, terms: string[], checkName: boolean, checkAuthor: boolean, checkOther: boolean): boolean => {
         return terms.every(term => {
             // 检查名称
-            if (checkName && matchTerm(skill.name, term)) return true;
+            if (checkName && matchTerm(skill.name, term)) { return true; }
             // 检查作者/来源
-            if (checkAuthor && matchTerm(skill.author, term)) return true;
+            if (checkAuthor && matchTerm(skill.author, term)) { return true; }
             // 检查其他字段
             if (checkOther) {
-                if (matchTerm(skill.description, term)) return true;
-                if (matchTerm(skill.descriptionZh, term)) return true;
-                if (skill.tags?.some(tag => matchTerm(tag, term))) return true;
+                if (matchTerm(skill.description, term)) { return true; }
+                if (matchTerm(skill.descriptionZh, term)) { return true; }
+                if (skill.tags?.some(tag => matchTerm(tag, term))) { return true; }
             }
             return false;
         });
@@ -212,15 +212,15 @@ export function searchMarketplaceSkills(skills: MarketplaceSkill[], query: strin
 
         // 优先级1（最高）：所有搜索条件都在名称中找到
         const allInName = terms.every(term => nameLower.includes(term));
-        if (allInName) return 3;
+        if (allInName) { return 3; }
 
         // 优先级2：名称部分匹配，作者/来源也匹配
         const anyInName = terms.some(term => nameLower.includes(term));
         const anyInAuthor = terms.some(term => authorLower.includes(term));
-        if (anyInName && anyInAuthor) return 2;
+        if (anyInName && anyInAuthor) { return 2; }
 
         // 优先级3：名称部分匹配
-        if (anyInName) return 1;
+        if (anyInName) { return 1; }
 
         // 优先级4：仅作者/来源匹配，或其他字段匹配
         return 0;
@@ -282,7 +282,7 @@ export function getTopSkills(skills: MarketplaceSkill[], limit: number = 50): Ma
 async function findSkillDirs(dir: string, maxDepth: number = 5): Promise<string[]> {
     const results: string[] = [];
     async function search(currentDir: string, depth: number) {
-        if (depth > maxDepth || !fs.existsSync(currentDir)) return;
+        if (depth > maxDepth || !fs.existsSync(currentDir)) { return; }
         try {
             if (fs.existsSync(path.join(currentDir, 'SKILL.md'))) {
                 results.push(currentDir);
@@ -409,8 +409,8 @@ export async function installMarketplaceSkill(skill: MarketplaceSkill): Promise<
             // 导入准备
             const enabledPath = getSkillsPath();
             const disabledPath = getDisabledPath();
-            if (!fs.existsSync(enabledPath)) await fs.promises.mkdir(enabledPath, { recursive: true });
-            if (!fs.existsSync(disabledPath)) await fs.promises.mkdir(disabledPath, { recursive: true });
+            if (!fs.existsSync(enabledPath)) { await fs.promises.mkdir(enabledPath, { recursive: true }); }
+            if (!fs.existsSync(disabledPath)) { await fs.promises.mkdir(disabledPath, { recursive: true }); }
 
             let installedCount = 0;
 

@@ -20,6 +20,9 @@ export class SkillsWebviewViewProvider implements vscode.WebviewViewProvider {
 
     private _view?: vscode.WebviewView;
     private _skills: SkillInfo[] = [];
+    private _allSkills: SkillInfo[] = [];
+    private _currentFilter: 'all' | 'installed' | 'available' = 'all';
+    private _currentSearchQuery: string = '';
 
     constructor(private readonly _extensionUri: vscode.Uri) { }
 
@@ -73,8 +76,8 @@ export class SkillsWebviewViewProvider implements vscode.WebviewViewProvider {
     }
 
     public async refresh() {
-        this._skills = await this._loadSkills();
-        this._updateWebview();
+        this._allSkills = await this._loadSkills();
+        this._applyFilters();
     }
 
     private async _loadSkills(): Promise<SkillInfo[]> {
@@ -160,33 +163,76 @@ export class SkillsWebviewViewProvider implements vscode.WebviewViewProvider {
     }
 
     private async _handleSearch(query: string) {
-        const allSkills = await this._loadSkills();
-        if (!query) {
-            this._skills = allSkills;
-        } else {
-            const lowerQuery = query.toLowerCase();
-            this._skills = allSkills.filter(s =>
-                s.name.toLowerCase().includes(lowerQuery) ||
-                s.description.toLowerCase().includes(lowerQuery)
-            );
-        }
-        this._updateWebview();
+        this._currentSearchQuery = query;
+        this._applyFilters();
     }
 
     private async _handleFilter(filter: string) {
-        const allSkills = await this._loadSkills();
-        switch (filter) {
-            case 'installed':
-                this._skills = allSkills.filter(s => s.isInstalled);
-                break;
-            case 'available':
-                this._skills = allSkills; // 目前都是本地已安装的
-                break;
-            default:
-                this._skills = allSkills;
+        this._currentFilter = filter as 'all' | 'installed' | 'available';
+        this._applyFilters();
+    }
+
+    /**
+     * 统一应用筛选和搜索逻辑
+     */
+    private _applyFilters() {
+        if (this._allSkills.length === 0) {
+            this._updateWebview();
+            return;
         }
+
+        let filtered = [...this._allSkills];
+
+        // 1. 应用类别筛选
+        if (this._currentFilter === 'installed') {
+            filtered = filtered.filter(s => s.isInstalled);
+        }
+
+        // 2. 应用搜索关键词过滤和排序
+        if (this._currentSearchQuery && this._currentSearchQuery.trim() !== '') {
+            const terms = this._currentSearchQuery.toLowerCase().trim().split(/\s+/).filter(t => t.length > 0);
+
+            // 过滤
+            filtered = filtered.filter(s => {
+                const name = s.name.toLowerCase();
+                const desc = s.description.toLowerCase();
+
+                return terms.every(term =>
+                    name.includes(term) ||
+                    desc.includes(term)
+                );
+            });
+
+            // 计分排序
+            filtered.sort((a, b) => {
+                const getScore = (skill: SkillInfo) => {
+                    const name = skill.name.toLowerCase();
+                    const allInName = terms.every(term => name.includes(term));
+                    if (allInName) { return 100; }
+
+                    const anyInName = terms.some(term => name.includes(term));
+                    if (anyInName) { return 50; }
+
+                    return 0;
+                };
+
+                const scoreA = getScore(a);
+                const scoreB = getScore(b);
+
+                if (scoreA !== scoreB) {
+                    return scoreB - scoreA;
+                }
+                return a.name.localeCompare(b.name, 'zh-CN');
+            });
+        } else {
+            // 没有搜索词时按名称排序
+            filtered.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+        }
+
+        this._skills = filtered;
         this._updateWebview();
     }
+
 
     private _openSkill(skillPath: string) {
         const uri = vscode.Uri.file(skillPath);

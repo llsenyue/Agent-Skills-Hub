@@ -49,6 +49,7 @@ export class SkillsWebviewPanel {
     private _pageSize: number = 200;  // 每页数量
     private _currentMainView: 'mySkills' | 'marketplace' = 'mySkills';  // 当前主视图
     private _currentFilter: 'all' | 'enabled' | 'disabled' = 'all';  // 当前筛选状态
+    private _currentSearchQuery: string = '';  // 当前搜索关键词
     private _currentLanguage: 'zh' | 'en' = 'zh';  // 当前语言
 
     private readonly _i18n = {
@@ -187,7 +188,8 @@ export class SkillsWebviewPanel {
         this._extensionUri = extensionUri;
 
         // 设置 HTML 内容
-        this._update();
+        const targetUri = this._panel.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'target.svg'));
+        this._update(targetUri);
 
         // 监听面板关闭
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
@@ -265,7 +267,8 @@ export class SkillsWebviewPanel {
                         break;
                     case 'switchLanguage':
                         this._currentLanguage = message.language;
-                        this._update();  // 重新生成 HTML 以应用新语言
+                        const targetUri = this._panel.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'target.svg'));
+                        this._update(targetUri);  // 重新生成 HTML 以应用新语言
                         await this._refresh();  // 重新加载数据
                         break;
                 }
@@ -291,24 +294,8 @@ export class SkillsWebviewPanel {
 
     private async _refresh() {
         this._allSkills = await this._loadSkills();
-
-        // 根据当前筛选状态重新应用筛选
-        switch (this._currentFilter) {
-            case 'enabled':
-                this._skills = this._allSkills.filter(s => s.isEnabled);
-                break;
-            case 'disabled':
-                this._skills = this._allSkills.filter(s => !s.isEnabled);
-                break;
-            default:
-                // "全部"筛选时，按名称排序
-                this._skills = [...this._allSkills].sort((a, b) =>
-                    a.name.localeCompare(b.name, 'zh-CN')
-                );
-        }
-
         this._tools = await detectTools();
-        this._updateWebview();
+        this._applyFilters();
     }
 
     private async _handleLinkTool(toolId: string) {
@@ -789,42 +776,80 @@ export class SkillsWebviewPanel {
     }
 
     private async _handleSearch(query: string) {
-        const allSkills = await this._loadSkills();
-        if (!query) {
-            this._skills = allSkills;
-        } else {
-            const lowerQuery = query.toLowerCase();
-            this._skills = allSkills.filter(s =>
-                s.name.toLowerCase().includes(lowerQuery) ||
-                s.description.toLowerCase().includes(lowerQuery) ||
-                (s.note && s.note.toLowerCase().includes(lowerQuery))
-            );
-        }
-        this._updateWebview();
+        this._currentSearchQuery = query;
+        this._applyFilters();
     }
 
     private async _handleFilter(filter: string) {
         // 保存筛选状态
         this._currentFilter = filter as 'all' | 'enabled' | 'disabled';
+        this._applyFilters();
+    }
 
-        // 如果 _allSkills 为空，先加载
+    /**
+     * 统一应用搜索和筛选逻辑
+     */
+    private _applyFilters() {
         if (this._allSkills.length === 0) {
-            this._allSkills = await this._loadSkills();
+            this._updateWebview();
+            return;
         }
 
-        switch (filter) {
-            case 'enabled':
-                this._skills = this._allSkills.filter(s => s.isEnabled);
-                break;
-            case 'disabled':
-                this._skills = this._allSkills.filter(s => !s.isEnabled);
-                break;
-            default:
-                // "全部"筛选时，按名称排序而不是按激活状态
-                this._skills = [...this._allSkills].sort((a, b) =>
-                    a.name.localeCompare(b.name, 'zh-CN')
-                );
+        let filtered = [...this._allSkills];
+
+        // 1. 应用类别筛选 (全部/已激活/待激活)
+        if (this._currentFilter === 'enabled') {
+            filtered = filtered.filter(s => s.isEnabled);
+        } else if (this._currentFilter === 'disabled') {
+            filtered = filtered.filter(s => !s.isEnabled);
         }
+
+        // 2. 应用搜索关键词过滤和排序
+        if (this._currentSearchQuery && this._currentSearchQuery.trim() !== '') {
+            const terms = this._currentSearchQuery.toLowerCase().trim().split(/\s+/).filter(t => t.length > 0);
+
+            // 过滤
+            filtered = filtered.filter(s => {
+                const name = s.name.toLowerCase();
+                const desc = s.description.toLowerCase();
+                const note = (s.note || '').toLowerCase();
+
+                return terms.every(term =>
+                    name.includes(term) ||
+                    desc.includes(term) ||
+                    note.includes(term)
+                );
+            });
+
+            // 计分排序
+            filtered.sort((a, b) => {
+                const getScore = (skill: SkillInfo) => {
+                    const name = skill.name.toLowerCase();
+                    const allInName = terms.every(term => name.includes(term));
+                    if (allInName) { return 100; }
+
+                    const anyInName = terms.some(term => name.includes(term));
+                    if (anyInName) { return 50; }
+
+                    return 0;
+                };
+
+                const scoreA = getScore(a);
+                const scoreB = getScore(b);
+
+                if (scoreA !== scoreB) {
+                    return scoreB - scoreA;
+                }
+                return a.name.localeCompare(b.name, 'zh-CN');
+            });
+        } else {
+            // 如果没有搜索关键词，且筛选状态是“全部”，则按名称字母序排序
+            if (this._currentFilter === 'all') {
+                filtered.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
+            }
+        }
+
+        this._skills = filtered;
         this._updateWebview();
     }
 
@@ -927,11 +952,14 @@ export class SkillsWebviewPanel {
         });
     }
 
-    private _update() {
-        this._panel.webview.html = this._getHtmlForWebview();
+    private _update(targetUri?: vscode.Uri) {
+        if (!targetUri) {
+            targetUri = this._panel.webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'media', 'target.svg'));
+        }
+        this._panel.webview.html = this._getHtmlForWebview(this._panel.webview, targetUri);
     }
 
-    private _getHtmlForWebview(): string {
+    private _getHtmlForWebview(webview: vscode.Webview, targetUri: vscode.Uri): string {
         const t = this._i18n[this._currentLanguage];
         return `<!DOCTYPE html>
 <html lang="${this._currentLanguage}">
@@ -1475,7 +1503,10 @@ export class SkillsWebviewPanel {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎯 ${t.appTitle}</h1>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <img src="${targetUri}" width="36" height="36" style="filter: drop-shadow(0 0 8px rgba(0, 122, 255, 0.4));">
+                <h1 style="margin: 0;">${t.appTitle}</h1>
+            </div>
             <div class="header-actions">
                 <button class="btn btn-secondary" id="switchLangBtn">${this._currentLanguage === 'zh' ? 'En' : '中'}</button>
                 <button class="btn btn-secondary" id="refreshBtn">🔄 ${t.refresh}</button>

@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.10-blue.svg" alt="Version">
+  <img src="https://img.shields.io/badge/version-0.1.12-blue.svg" alt="Version">
   <img src="https://img.shields.io/badge/design-Apple_Style-007aff.svg" alt="Apple Style UI">
   <img src="https://img.shields.io/badge/language-TypeScript-blue.svg" alt="TypeScript">
   <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
@@ -39,6 +39,8 @@
 - 🔗 **多工具支持** - 支持 Claude Code、Gemini CLI、Antigravity、Windsurf、OpenCode、Codex CLI
 - 🛒 **技能市场** - 浏览 65,000+ 开源 Skills,一键安装
 - 🌐 **国际化** - 支持中英文界面无缝切换
+- 🔍 **智能搜索** - 支持多关键词 AND 匹配与优先级排序
+- 🔄 **联动过滤** - 搜索与分类筛选（已激活/待激活）完美联动
 - 📦 **GitHub 导入** - 直接从 GitHub 仓库导入 Skills
 - 📝 **备注系统** - 为每个 Skill 添加个性化备注
 

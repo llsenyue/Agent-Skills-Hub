@@ -5,6 +5,21 @@ All notable changes to **Agent Skills Hub** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.12] - 2026-01-30
+
+### Added
+
+- 🔍 **智能搜索增强**:
+  - **多关键词 AND 匹配**: 搜索框现在支持按空格拆分关键词，仅显示同时满足所有条件的技能。
+  - **结果优先级排序**: 优先显示标题（Name）匹配的技能，提升检索效率。
+- 🔄 **搜索与筛选联动**:
+  - 修复了搜索框不为空时筛选功能失效的问题。现在搜索关键词与分类筛选（如“已激活”）可同时生效。
+
+### Fixed
+
+- 💡 **UI 一致性**: 同步更新了侧边栏视图，使其搜索体验与管理面板保持完全一致。
+- 🔧 **代码质量**: 修复了多处 ESLint 警告，优化了过滤逻辑的执行效率。
+
 ## [0.1.7] - 2026-01-24
 
 ### Added
